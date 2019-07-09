@@ -41,3 +41,12 @@ target_wrapper.*
 
 # QtCreator CMake
 CMakeLists.txt.user*
+
+
+# output file
+*.lib
+*.exe
+*.exp
+*.pyd
+*.qmake.*
+*.obj
