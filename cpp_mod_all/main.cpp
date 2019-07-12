@@ -1,111 +1,27 @@
-#include<pybind11/pybind11.h>
-#include<pybind11/stl.h> // vector用
-#include<pybind11/numpy.h>
-#include<algorithm>
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h> // vector用
+#include <pybind11/numpy.h>
+#include <algorithm>
 #include <iostream>
-namespace py = pybind11;
 
-int add(int a, int b){
-	return a + b;
-}
+#include <pybind11/stl.h>
 
-std::vector<int> vec_double(std::vector<int> &vec) { // リストを引数に取る。vector型で受け取れる
-	for (auto &v : vec){
-		v *= 2;
-	}
-	vec[1] = 1000; // 変数vecはコピーされたものなので、参照先は変わらないらしい
-	return vec;
-}
-// 2次元リストの各行について、自身以前の総和を計算したものを入れる処理(各行の要素数は違ってよい)
-std::vector<std::vector<int>> vec_add(std::vector<std::vector<int>> &vec) { // 2次元リストはベクタのベクタで受け取れる
-	std::vector<std::vector<int>> result(vec.size(), std::vector<int>()); // 変数を新規作成 リストで返す
-	for (int i = 0; i < vec.size(); i++){ // 全ての行について
-		int tmp = 0;
-		for (auto &t : vec[i]){ // ある行の全ての値について
-			tmp += t;
-			result[i].push_back(tmp); // 新規変数にpush
-		}
-	}
-	return result;
-}
-
-
-PYBIND11_MODULE(minimum_sample, m) { // must same target file name
-	m.doc() = "Pybind Document Sample";
-	m.def("add", &add);
-
-	m.def("vec_double", &vec_double);
-	m.def("vec_add", &vec_add);
-
-    m.def("get_set", []() { // pythonのset型を作成して返す
-        py::set set;
-        set.add(py::str("key1"));
-        set.add("key2");
-        set.add(std::string("key3"));
-        return set;
-    });
-    m.def("print_set", [](py::set set) { // setデータをprint
-        for (auto item : set)
-            py::print("key:", item);
-    });
-    m.def("cast_set", []() { return std::set<std::string>{"key1", "key2"}; });
-    m.def("load_set", [](const std::set<std::string> &set) {
-        return set.count("key1") && set.count("key2") && set.count("key3");
-    });
-
-}
+#include <vector>
+#include <string>
 
 #include <pybind11/eigen.h>
 #include <Eigen/Dense>
+
 namespace py = pybind11;
+using namespace pybind11::literals;
 
-template <typename T>
-using RMatrix = Eigen::Matrix<T, -1, -1, Eigen::RowMajor>;
-
-template <typename T>
-void print_array(RMatrix<T> m){
-    py::print(m);
+int add(int i = 1, int j = 2) {
+    return i + j;
 }
-template <typename T>
-RMatrix<T> modify_array(RMatrix<T> m, T a){
-    return m * a;
+int add2(int i, int j) {
+    return i + j;
 }
-template <typename T>
-void modify_array_inplace(Eigen::Ref<RMatrix<T>> m, T a){ //中身参照
-    m = m * a;
-}
-PYBIND11_MODULE(QT_TARGET, m){
-    m.def("print_array", &print_array<double>, "");
-    m.def("modify_array", &modify_array<double>, "");
-    m.def("modify_array_inplace", &modify_array_inplace<double>, "");
-}
-
-
-
-//numpyの配列を参照するだけの関数(2次元配列限定)
-template <typename T>
-void print_array(py::array_t<T> x){
-    const auto &buff_info = x.request(); //requestメソッドで以下の構造体を得られる
-    /*
-        struct buffer_info {
-            void *ptr;
-            ssize_t itemsize;
-            std::string format;
-            ssize_t ndim;
-            std::vector<ssize_t> shape;
-            std::vector<ssize_t> strides;
-        };
-    */
-    const auto &shape = buff_info.shape; // numpyのshapeと同じ
-    for (auto i = 0; i < shape[0]; i++){ // 普通に成分の数だけ回す
-        for (auto j = 0; j < shape[1]; j++){
-            auto v = *x.data(i, j); // x.dataで読み取り専用のconstポインタが得られる。
-            //std::cout << "i:" << i << "j:" << j << "v:" << v << std::endl;
-            py::print(v); // jupyterとかでprintする場合はこっち
-        }
-    }
-}
-//numpyの配列を書き換える関数
+//numpyの配列を書き換える関数 ラムダで書いたらmutableにならないらしい
 template <typename T>
 void modify_array_inplace(py::array_t<T> x, T a){
     const auto &buff_info = x.request(); // numpyのデータ構造体取得
@@ -116,129 +32,386 @@ void modify_array_inplace(py::array_t<T> x, T a){
         }
     }
 }
-// numpyの配列を新しく作って返す
-template <typename T>
-auto modify_array(py::array_t<T> x, T a){
-    const auto &buff_info = x.request();
-    const auto &shape = buff_info.shape;
-    py::array_t<T> y{shape}; // 新しい配列作成。shapeをコンストラクタに渡す方法。同じ形になる
-    for (auto i = 0; i < shape[0]; i++){
-        for (auto j = 0; j < shape[1]; j++){
-            *y.mutable_data(i, j) = *x.data(i, j) + a;
-        }
-    }
-    return y;
-}
-PYBIND11_MODULE(numpy_mod, m) {
-    m.def("print_array", &print_array<int32_t>, ""); // templateで作成した関数は型指定をして登録する
-    m.def("print_array", &print_array<double>, "");
-    m.def("modify_array_inplace", &modify_array_inplace<int32_t>, "");
-    m.def("modify_array_inplace", &modify_array_inplace<double>, "");
-    m.def("modify_array", &modify_array<int32_t>, "");
-    m.def("modify_array", &modify_array<double>, "");
-}
-
-
-
-#include <pybind11/eigen.h>
-#include <Eigen/Dense>
-namespace py = pybind11;
 
 template <typename T>
 using RMatrix = Eigen::Matrix<T, -1, -1, Eigen::RowMajor>;
 
 template <typename T>
-void block_test(Eigen::Ref<RMatrix<T>> m, T a) //中身参照
-{
-	//プロパティ取得
-	py::print(m.rows(), m.cols());
-	//blockで4x4取り出して処理する
-	py::print(m.block(0, 0, 4, 4));
-	py::print(m.block(4, 0, 4, 4));
-	
-	Eigen::MatrixXd A = m.block(4, 0, 4, 4); // blockで取り出した行列はコピー
-	py::print(A.rows(), A.cols());
-	A = A * a; // ブロック元には影響しない
-	py::print(A);
-	m.block<4, 4>(2, 0) = Eigen::Matrix4d::Identity(); // blockに直接代入すると書き換えられる <>はサイズ固定する場合に使用
+void print_array(RMatrix<T> m){
+	py::print(m);
 }
-PYBIND11_MODULE(QT_TARGET, m)
-{
-	m.def("block_test", &block_test<double>, "");
+template <typename T>
+RMatrix<T> modify_array(RMatrix<T> m, T a){
+	return m * a;
+}
+template <typename T>
+void modify_array_inplaceE(Eigen::Ref<RMatrix<T>> m, T a){ //中身参照
+	m = m * a;
 }
 
-
-int add(int i, int j) {
-	return i + j;
-}
-int add_def(int i = 1, int j = 2) {
-	return i + j;
-}
-PYBIND11_MODULE(default_arg_declare_val, m) {
-	m.doc() = "pybind11 example plugin";
-	m.def("add", &add, "A function which adds tow numbers");
-	m.def("add1", &add, "A function which adds two numbers", py::arg("i"), py::arg("j")); // i=0,j=1のような形で指定する
-	using namespace pybind11::literals;
-	m.def("add2", &add, "i"_a, "j"_a); // 上の表記の簡略化版
-	m.def("add_def", &add_def, "A function which adds two numbers", py::arg("i") = 1, py::arg("j") = 2); // デフォルト引数
-	m.def("add_def1", &add_def, py::arg("i") = 1, py::arg("j") = 2); // regular notation
-	m.def("add_def2", &add_def, "i"_a = 1, "j"_a = 2); // shorthand
+PYBIND11_MODULE(QT_TARGET, m) {
+	m.doc() = "pybind11 example plugin"; // optional module docstring
+//	m.def("add", &add, "A function which adds two numbers");
+	m.def("add", &add, "A function which adds two numbers", py::arg("a"), py::arg("b"));
 	
-	//変数の公開
+	m.def("add2", &add, "i"_a=1, "j"_a=2);
+	m.def("add22", &add2, "i"_a=1, "j"_a=2);
+	
+	m.def("get_list", []() {
+		py::list list;
+		list.append("value");
+		py::print("Entry at position 0:", list[0]);
+		list[0] = py::str("overwritten");
+		return list;
+	});
+	m.def("print_list", [](py::list list) {
+		int index = 0;
+		for (auto item : list)
+			py::print("list item {}: {}"_s.format(index++, item));
+	});
+	m.def("get_list_in_list", []() {
+		py::list list;
+		py::list list2, list3;
+//		list << py::int_(1) << py::int_(3) << py::int_(5) << py::int_(1); //実行時error
+		list2.append(py::int_(1));
+		list2.append(5);
+		list.append(list2);
+		return list;
+	});
+	
+	// test_set
+	m.def("get_set", []() {
+		py::set set;
+		set.add(py::str("key1"));
+		set.add("key2");
+		set.add(std::string("key3"));
+		return set;
+	});
+	m.def("print_set", [](py::set set) {
+		for (auto item : set)
+			py::print("key:", item);
+	});
+	
+	// test_dict
+	m.def("get_dict", []() { return py::dict("key"_a="value"); });
+	m.def("print_dict", [](py::dict dict) {
+		for (auto item : dict)
+			py::print("key: {}, value={}"_s.format(item.first, item.second));
+	});
+	m.def("dict_keyword_constructor", []() {
+		auto d1 = py::dict("x"_a=1, "y"_a=2);
+		auto d2 = py::dict("z"_a=3, **d1);
+		return d2;
+	});
+	
+	// test_str
+    m.def("str_from_string", []() { return py::str(std::string("baz")); });
+    m.def("str_from_bytes", []() { return py::str(py::bytes("boo", 3)); });
+    m.def("str_from_object", [](const py::object& obj) { return py::str(obj); });
+    m.def("repr_from_object", [](const py::object& obj) { return py::repr(obj); });
+
+    m.def("str_format", []() {
+        auto s1 = "{} + {} = {}"_s.format(1, 2, 3);
+        auto s2 = "{a} + {b} = {c}"_s.format("a"_a=1, "b"_a=2, "c"_a=3);
+        return py::make_tuple(s1, s2);
+    });
+
+    // test_bytes
+    m.def("bytes_from_string", []() { return py::bytes(std::string("foo")); });
+    m.def("bytes_from_str", []() { return py::bytes(py::str("bar", 3)); });
+
+    // test_capsule
+    m.def("return_capsule_with_destructor", []() {
+        py::print("creating capsule");
+        return py::capsule([]() {
+            py::print("destructing capsule");
+        });
+    });
+
+    m.def("return_capsule_with_destructor_2", []() {
+        py::print("creating capsule");
+        return py::capsule((void *) 1234, [](void *ptr) {
+            py::print("destructing capsule: {}"_s.format((size_t) ptr));
+        });
+    });
+
+    m.def("return_capsule_with_name_and_destructor", []() {
+        auto capsule = py::capsule((void *) 1234, "pointer type description", [](PyObject *ptr) {
+            if (ptr) {
+                auto name = PyCapsule_GetName(ptr);
+                py::print("destructing capsule ({}, '{}')"_s.format(
+                    (size_t) PyCapsule_GetPointer(ptr, name), name
+                ));
+            }
+        });
+        void *contents = capsule;
+        py::print("created capsule ({}, '{}')"_s.format((size_t) contents, capsule.name()));
+        return capsule;
+    });
+
+    // test_accessors
+    m.def("accessor_api", [](py::object o) {
+        auto d = py::dict();
+
+        d["basic_attr"] = o.attr("basic_attr");
+
+        auto l = py::list();
+        for (const auto &item : o.attr("begin_end")) {
+            l.append(item);
+        }
+        d["begin_end"] = l;
+
+        d["operator[object]"] = o.attr("d")["operator[object]"_s];
+        d["operator[char *]"] = o.attr("d")["operator[char *]"];
+
+        d["attr(object)"] = o.attr("sub").attr("attr_obj");
+        d["attr(char *)"] = o.attr("sub").attr("attr_char");
+        try {
+            o.attr("sub").attr("missing").ptr();
+        } catch (const py::error_already_set &) {
+            d["missing_attr_ptr"] = "raised"_s;
+        }
+        try {
+            o.attr("missing").attr("doesn't matter");
+        } catch (const py::error_already_set &) {
+            d["missing_attr_chain"] = "raised"_s;
+        }
+
+        d["is_none"] = o.attr("basic_attr").is_none();
+
+        d["operator()"] = o.attr("func")(1);
+        d["operator*"] = o.attr("func")(*o.attr("begin_end"));
+
+        // Test implicit conversion
+        py::list implicit_list = o.attr("begin_end");
+        d["implicit_list"] = implicit_list;
+        py::dict implicit_dict = o.attr("__dict__");
+        d["implicit_dict"] = implicit_dict;
+
+        return d;
+    });
+
+    m.def("tuple_accessor", [](py::tuple existing_t) {
+        try {
+            existing_t[0] = 1;
+        } catch (const py::error_already_set &) {
+            // --> Python system error
+            // Only new tuples (refcount == 1) are mutable
+            auto new_t = py::tuple(3);
+            for (size_t i = 0; i < new_t.size(); ++i) {
+                new_t[i] = i;
+            }
+            return new_t;
+        }
+        return py::tuple();
+    });
+
+    m.def("accessor_assignment", []() {
+        auto l = py::list(1);
+        l[0] = 0;
+
+        auto d = py::dict();
+        d["get"] = l[0];
+        auto var = l[0];
+        d["deferred_get"] = var;
+        l[0] = 1;
+        d["set"] = l[0];
+        var = 99; // this assignment should not overwrite l[0]
+        d["deferred_set"] = l[0];
+        d["var"] = var;
+
+        return d;
+    });
+
+    // test_constructors
+    m.def("default_constructors", []() {
+        return py::dict(
+            "str"_a=py::str(),
+            "bool"_a=py::bool_(),
+            "int"_a=py::int_(),
+            "float"_a=py::float_(),
+            "tuple"_a=py::tuple(),
+            "list"_a=py::list(),
+            "dict"_a=py::dict(),
+            "set"_a=py::set()
+        );
+    });
+
+    m.def("converting_constructors", [](py::dict d) {
+        return py::dict(
+            "str"_a=py::str(d["str"]),
+            "bool"_a=py::bool_(d["bool"]),
+            "int"_a=py::int_(d["int"]),
+            "float"_a=py::float_(d["float"]),
+            "tuple"_a=py::tuple(d["tuple"]),
+            "list"_a=py::list(d["list"]),
+            "dict"_a=py::dict(d["dict"]),
+            "set"_a=py::set(d["set"]),
+            "memoryview"_a=py::memoryview(d["memoryview"])
+        );
+    });
+
+    m.def("cast_functions", [](py::dict d) {
+        // When converting between Python types, obj.cast<T>() should be the same as T(obj)
+        return py::dict(
+            "str"_a=d["str"].cast<py::str>(),
+            "bool"_a=d["bool"].cast<py::bool_>(),
+            "int"_a=d["int"].cast<py::int_>(),
+            "float"_a=d["float"].cast<py::float_>(),
+            "tuple"_a=d["tuple"].cast<py::tuple>(),
+            "list"_a=d["list"].cast<py::list>(),
+            "dict"_a=d["dict"].cast<py::dict>(),
+            "set"_a=d["set"].cast<py::set>(),
+            "memoryview"_a=d["memoryview"].cast<py::memoryview>()
+        );
+    });
+
+    m.def("get_implicit_casting", []() {
+        py::dict d;
+        d["char*_i1"] = "abc";
+        const char *c2 = "abc";
+        d["char*_i2"] = c2;
+        d["char*_e"] = py::cast(c2);
+        d["char*_p"] = py::str(c2);
+
+        d["int_i1"] = 42;
+        int i = 42;
+        d["int_i2"] = i;
+        i++;
+        d["int_e"] = py::cast(i);
+        i++;
+        d["int_p"] = py::int_(i);
+
+        d["str_i1"] = std::string("str");
+        std::string s2("str1");
+        d["str_i2"] = s2;
+        s2[3] = '2';
+        d["str_e"] = py::cast(s2);
+        s2[3] = '3';
+        d["str_p"] = py::str(s2);
+
+        py::list l(2);
+        l[0] = 3;
+        l[1] = py::cast(6);
+        l.append(9);
+        l.append(py::cast(12));
+        l.append(py::int_(15));
+
+        return py::dict(
+            "d"_a=d,
+            "l"_a=l
+        );
+    });
+
+    // test_print
+    m.def("print_function", []() {
+        py::print("Hello, World!");
+        py::print(1, 2.0, "three", true, std::string("-- multiple args"));
+        auto args = py::make_tuple("and", "a", "custom", "separator");
+        py::print("*args", *args, "sep"_a="-");
+        py::print("no new line here", "end"_a=" -- ");
+        py::print("next print");
+
+        auto py_stderr = py::module::import("sys").attr("stderr");
+        py::print("this goes to stderr", "file"_a=py_stderr);
+
+        py::print("flush", "flush"_a=true);
+
+        py::print("{a} + {b} = {c}"_s.format("a"_a="py::print", "b"_a="str.format", "c"_a="this"));
+    });
+
+	struct UnregisteredType { };
+    m.def("print_failure", []() { py::print(42, UnregisteredType()); });
+
+    m.def("hash_function", [](py::object obj) { return py::hash(obj); });
+
+    m.def("test_number_protocol", [](py::object a, py::object b) {
+        py::list l;
+        l.append(a.equal(b));
+        l.append(a.not_equal(b));
+        l.append(a < b);
+        l.append(a <= b);
+        l.append(a > b);
+        l.append(a >= b);
+        l.append(a + b);
+        l.append(a - b);
+        l.append(a * b);
+        l.append(a / b);
+        l.append(a | b);
+        l.append(a & b);
+        l.append(a ^ b);
+        l.append(a >> b);
+        l.append(a << b);
+        return l;
+    });
+
+    m.def("test_list_slicing", [](py::list a) {
+        return a[py::slice(0, -1, 2)];
+    });
+	
+	//test_stl.cpp---------------------------------------------------------------
+	// test_vector
+    m.def("cast_vector", []() { return std::vector<int>{1}; });
+    m.def("load_vector", [](const std::vector<int> &v) { return v.at(0) == 1 && v.at(1) == 2; });
+    // `std::vector<bool>` is special because it returns proxy objects instead of references
+    m.def("cast_bool_vector", []() { return std::vector<bool>{true, false}; });
+    m.def("load_bool_vector", [](const std::vector<bool> &v) {
+        return v.at(0) == true && v.at(1) == false;
+    });
+//    // Unnumbered regression (caused by #936): pointers to stl containers aren't castable
+//    static std::vector<RValueCaster> lvv{2};
+//    m.def("cast_ptr_vector", []() { return &lvv; });
+
+    // test_deque
+    m.def("cast_deque", []() { return std::deque<int>{1}; });
+    m.def("load_deque", [](const std::deque<int> &v) { return v.at(0) == 1 && v.at(1) == 2; });
+
+    // test_array
+    m.def("cast_array", []() { return std::array<int, 2> {{1 , 2}}; });
+    m.def("load_array", [](const std::array<int, 2> &a) { return a[0] == 1 && a[1] == 2; });
+
+    // test_valarray
+    m.def("cast_valarray", []() { return std::valarray<int>{1, 4, 9}; });
+    m.def("load_valarray", [](const std::valarray<int>& v) {
+        return v.size() == 3 && v[0] == 1 && v[1] == 4 && v[2] == 9;
+    });
+
+    // test_map
+    m.def("cast_map", []() { return std::map<std::string, std::string>{{"key", "value"}}; });
+    m.def("load_map", [](const std::map<std::string, std::string> &map) {
+        return map.at("key") == "value" && map.at("key2") == "value2";
+    });
+
+    // test_set
+    m.def("cast_set", []() { return std::set<std::string>{"key1", "key2"}; });
+    m.def("load_set", [](const std::set<std::string> &set) {
+        return set.count("key1") && set.count("key2") && set.count("key3");
+    });
+	
+	m.def("vint2", [](std::vector<std::vector<int>> list){
+		for(auto l:list){
+			for(auto val:l){
+				py::print(val);
+			}
+		}
+	});
+	
+	// module val
 	m.attr("the_answer") = 42;
 	py::object world = py::cast("World");
 	m.attr("what") = world;
-}
-
-
-PYBIND11_MODULE(QT_TARGET, m) {
-	m.def("vector_int", [](std::vector<int> arr) { // bool値をvector<int>で拾う→1,0になる(charは不可)
-		std::stringstream ss;
-		for (auto a : arr) {
-			ss << a << " ";
-		}
-		py::print(ss.str());
-		std::vector<int> v{ true, false, true, true, false };
-		return v;
-	});
-	m.def("deque_bool", [](std::deque<bool> arr) { // これはエラーになる
-		std::stringstream ss;
-		for (auto a : arr) {
-			ss << a << " ";
-		}
-		py::print(ss.str());
-		std::deque<bool> v{ true, false, true, true, false };
-		return v;
-	});
-	m.def("vector_bool", [](std::vector<bool> arr) { // 
-		std::stringstream ss;
-		for (auto a : arr) {
-			ss << a << " ";
-		}
-		py::print(ss.str());
-		std::vector<bool> v{ true, false, true, true, false };
-		v[1] = true;
-		return v;
-	});
-}
-
-
-PYBIND11_MODULE(QT_TARGET, m) {
-    m.def("get_std_set", []() {
-        std::set<int> s{ 1,5,6,1 };
-        return s;
-    });
-}
-
-PYBIND11_MODULE(QT_TARGET, m) {
-	// ラムダで記述
-	m.def("get_tuple", []() { //
-		std::vector<ssize_t> shape{ 2,3 }; //2行3列の形状
-		py::array_t<double> y{shape};
-		*y.mutable_data(0, 1) = 8.5; //0行1列目だけ設定してみる。初期値はゴミデータらしい
-		std::vector<int> l{ 3, 5, 10, 20 };
-		std::set<std::string> s{ "A","OK","123" };
-		std::tuple<py::array_t<double>, std::vector<int>, std::set<std::string>> t = std::make_tuple(y, l, s);
-		return t;
-	});
+	std::vector<int> l{1,5,8};
+	m.attr("num_list") = py::cast(l);
+	
+	py::module m_sub = m.def_submodule("subsubmodule");
+	m_sub.def("submodule_func", []() { return "submodule_func()"; });
+	
+	// numpy----------------------------------------------------------------
+	m.def("modify_array_inplace", &modify_array_inplace<double>, "");
+	m.def("modify_array_inplace", &modify_array_inplace<int32_t>, "");
+	//Eigen-----------------------------------------------------------------
+	m.def("print_array", &print_array<double>, "");
+	m.def("modify_array", &modify_array<double>, "");
+	m.def("modify_array_inplaceE", &modify_array_inplaceE<double>, "");
+	
 }

@@ -13,21 +13,16 @@ int add(int a, int b){
 	g_cnt++;
 	return a+b;
 }
-
 int get_cnt(){
 	return g_cnt;
 }
-
 // モジュールとしてpythonに関数を公開
 PyMODINIT_FUNC PyInit_sample() {
 	py::module m("sample", "pybind11 module sample."); // define module
 	m.def("add", &add, "");
 	m.def("get", &get_cnt, ""); // pythonからC++の変数を操作できる
-	
 	return m.ptr();
 }
-
-
 int main(int argc, char** argv) {
 	(void)argc;
 	wchar_t* program = Py_DecodeLocale(argv[0], nullptr);
@@ -43,11 +38,6 @@ int main(int argc, char** argv) {
 	try {
 		auto global = py::dict(py::module::import("__main__").attr("__dict__"));
 		auto local = py::dict();
-		// ここにコードを記述していく
-
-		// Evaluate in scope of main module
-//		py::object scope = py::module::import("__main__").attr("__dict__");
-		
 		// Evaluate an isolated expression
 		global["my_variable"] = 3;
 		int result = py::eval("my_variable + 10", global).cast<int>();

@@ -27,4 +27,7 @@
 
 include(../pybind_setting.pri)
 
+#INCLUDEPATH -= $$PYBINDDIR
+#INCLUDEPATH += C:/Users/nitta/Documents/GitHub/pybind11/include $$PYBINDDIR
+
 SOURCES += main.cpp

@@ -32,6 +32,8 @@ int main(int argc, char** argv) {
 		py::eval<py::eval_single_statement>("aaa = 100+200", global, local);
 		// 変数を定義する
 		local["x"] = 100; // localに新しく追加
+		global["g_x"] = 1000; // globalに追加
+		py::eval("print(x, g_x)", global, local);
 		py::eval<py::eval_single_statement>("y = 200", global, local); // pythonコードで定義、参照先のlocalに追加される
 		py::print(local["y"]);
 		py::eval<py::eval_single_statement>("yy = 250", global); // pythonコードで定義、global変数として追加される
@@ -74,13 +76,13 @@ int main(int argc, char** argv) {
 		py::object scipy_ver = scipy.attr("__version__");
 		py::print(py::str(scipy_ver));
 		// Construct a Python object of class Decimal
-		py::object pi = Decimal("3.14159");
+		py::object pi = Decimal("3.14159"); // pi = decimal.Decimal("3.14159")
 		// Use Python to make our directories
 		py::object os = py::module::import("os");
 		py::object makedirs = os.attr("makedirs");
 //		makedirs("./tmp/path/to/somewhere");
 		// Calculate e^π in decimal
-		py::object exp_pi = pi.attr("exp")();
+		py::object exp_pi = pi.attr("exp")(); // exp_pi = pi.exp()
 		py::print(py::str(exp_pi));
 	} catch (py::error_already_set& e) {
 		std::cout << "Python error.\n" << e.what() << "\n";

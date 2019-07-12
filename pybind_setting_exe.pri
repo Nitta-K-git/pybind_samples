@@ -13,6 +13,9 @@ LIBS += $$PYBINDLIB
 
 # 出力ファイルをoutフォルダに設定(これは任意)
 DESTDIR = $$clean_path($$_PRO_FILE_PWD_/../out)
+#DESTDIR_TARGET = $$clean_path($$_PRO_FILE_PWD_/../out) # 実行ファイルも意味ない
+#DLLDESTDIR = $$clean_path($$_PRO_FILE_PWD_/../out)
+#OBJECTS_DIR = $$clean_path($$_PRO_FILE_PWD_/../out_obj)
 
 win32{
     win32-msvc{

@@ -13,6 +13,7 @@ int main(int argc, char** argv) {
 		fprintf(stderr, "Fatal error: cannot decode argv[0]\n");
 		exit(1);
 	}
+	
 	Py_SetProgramName(program);
 	Py_Initialize();
 	

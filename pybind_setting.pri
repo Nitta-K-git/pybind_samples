@@ -15,7 +15,9 @@ INCLUDEPATH  += $$EIGENDIR $$PYBINDDIR
 LIBS += $$PYBINDLIB
 
 # 出力ファイルをoutフォルダに設定(これは任意)
-DESTDIR = $$clean_path($$_PRO_FILE_PWD_/../out)
+#DESTDIR_TARGET = $$clean_path($$_PRO_FILE_PWD_/../out) # 無視される?
+#DESTDIR = $$clean_path($$_PRO_FILE_PWD_/../out) # obj,exp,lib,pyd丸ごとoutフォルダに出てくる
+DLLDESTDIR = $$clean_path($$_PRO_FILE_PWD_/../out) # releaseに丸ごと出てきて、outにはdllだけ出てくる(コピーされるっぽい)
 
 win32{
     win32-msvc{
