@@ -13,13 +13,13 @@ add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 # include(../opt.cmake)
 # include(../vs.cmake)
 
-message("---eigen setting---")
-set( EIGEN_DIR C:/eigen-3.3.7)
-include_directories(${EIGEN_DIR})
-message(${EIGEN_DIR})
+# message("---eigen setting---")
+# set( EIGEN_DIR C:/eigen-3.3.7)
+# include_directories(${EIGEN_DIR})
+# message(${EIGEN_DIR})
 
-message("---pybind11 setting---")
-include_directories(C:/Users/nitta/AppData/Local/Programs/Python/Python35/include)
+# message("---pybind11 setting---")
+# include_directories(C:/Users/nitta/AppData/Local/Programs/Python/Python35/include)
 ADD_DEFINITIONS(-DQT_NO_KEYWORDS)
 # slots,signals,emitの代わりにQ_SLOTS,Q_SIGNALS,Q_EMITを使用すること
 

@@ -66,9 +66,18 @@ int main(int argc, char** argv) {
 // https://github.com/pybind/pybind11/issues/1508
 
 #include <pybind11/embed.h> // everything needed for embedding
+#include <pybind11/pybind11.h>
+#include <pybind11/stl_bind.h>
+
+#include <iostream>
 namespace py = pybind11;
 
 PYBIND11_MAKE_OPAQUE(std::vector<int>);
+
+PYBIND11_EMBEDDED_MODULE(_cc11binds, m) {
+	m.doc() = "C++ type bindings created by py11bind";
+	py::bind_vector<std::vector<int>>(m, "IntVector", py::module_local(false));
+}
 
 int main() {
 	py::scoped_interpreter guard{}; // start the interpreter and keep it alive
@@ -86,6 +95,7 @@ int main() {
 			 print(arr)
 			 )");
 	py::module m;
+	py::module::import("_cc11binds");
 	m = py::module::import("stl");
 	auto addFunc = m.attr("add");
 	
@@ -93,6 +103,16 @@ int main() {
 	v.push_back(3);
 	v.push_back(6);
 	
+	std::cout << "before" << std::endl;
+	for(auto &&val:v){
+		std::cout << val << std::endl;
+	}
+	
 	addFunc(&v);
+	
+	std::cout << "after" << std::endl;
+	for(auto &&val:v){
+		std::cout << val << std::endl;
+	}
 	
 }
