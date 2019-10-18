@@ -1,4 +1,4 @@
-# pybind型変換まとめ
+# 基本
 
 ```cpp
 /* C++ */
@@ -104,7 +104,7 @@ list item 0: [1, 3, 4]
 list item 1: [2, 3]
 ```
 
-型コンストラクタ
+## 型コンストラクタ
 
 ```cpp
 // test_constructors
@@ -127,7 +127,7 @@ m.def("default_constructors", []() {
 {'dict': {}, 'tuple': (), 'list': [], 'set': set(), 'int': 0, 'str': '', 'float': 0.0, 'bool': False}
 ```
 
-std型の変数
+## std型の変数
 
 ```cpp
 m.def("cast_vector", []() { return std::vector<int>{1}; });
@@ -185,7 +185,7 @@ m_sub.def("submodule_func", []() { return "submodule_func()"; });
 'submodule_func()'
 ```
 
-numpyとの連携
+## numpyとの連携
 
 ```cpp
 #include<pybind11/pybind11.h>
@@ -283,11 +283,13 @@ m.def("modify_array_inplace", &modify_array_inplace<int32_t>, "");
 
 
 
-基本的な使い方
+# 基本的な使い方
+
+## クラスその他
+
+- チュートリアル https://pybind11.readthedocs.io/en/stable/basics.html
 
 ```cpp
-// チュートリアルに従ってやってみる https://pybind11.readthedocs.io/en/stable/basics.html
-
 #include <pybind11/pybind11.h>
 namespace py = pybind11;
 
@@ -491,7 +493,7 @@ void generic(py::args args, py::kwargs kwargs) { // 表記違い
 m.def("generic", &generic);
 ```
 
-Eigen
+## Eigen
 
 ```cpp
 template <typename T>
@@ -519,7 +521,7 @@ m.def("modify_array_inplaceE", &modify_array_inplaceE<double>, "");
  [24. 27. 30. 33.]]
 ```
 
-Qt C++ call python
+## Qt C++ call python
 
 ```cmake
 QT -= core gui
